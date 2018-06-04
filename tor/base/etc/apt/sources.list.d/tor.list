@@ -1,0 +1,4 @@
+deb https://deb.torproject.org/torproject.org bionic main
+deb-src https://deb.torproject.org/torproject.org bionic main
+deb https://deb.torproject.org/torproject.org tor-nightly-master-bionic main
+deb-src https://deb.torproject.org/torproject.org tor-nightly-master-bionic main
