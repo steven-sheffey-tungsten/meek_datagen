@@ -21,16 +21,21 @@ LABEL version="0.5"
 LABEL Description="This image starts up Firefox and navigates HTTPS sites to gather samples of HTTPS traffic" 
 
 # Set versioning for tor browser
+# ENV TOR_DIST_MIRROR="www.torproject.org"
+ENV TOR_DIST_MIRROR="tor.ybti.net"
 ENV TBB_PATH="/home/$DEFAULT_USER/tor_browser"
-ENV TOR_VERSION=7.5.3
+ENV TBB_VERSION=8.0a7
+ENV GPG_KEYSERVER=sks-keyservers.net
+ENV TBB_KEYID="EF6E 286D DA85 EA2A 4BA7  DE68 4E2C 6E87 9329 8290"
+
 # Download tor browser from the tor browser website
 # Verify it with GPG
 # Unzip it
 # Delete the zip and gpg files
-RUN wget --no-verbose "https://www.torproject.org/dist/torbrowser/${TOR_VERSION}/tor-browser-linux64-${TOR_VERSION}_en-US.tar.xz" -O tor_browser.tar.xz && \
+RUN wget --no-verbose "https://${TOR_DIST_MIRROR}/dist/torbrowser/${TBB_VERSION}/tor-browser-linux64-${TBB_VERSION}_en-US.tar.xz" -O tor_browser.tar.xz && \
     tar xf tor_browser.tar.xz && \
-    wget --no-verbose "https://www.torproject.org/dist/torbrowser/${TOR_VERSION}/tor-browser-linux64-${TOR_VERSION}_en-US.tar.xz.asc" -O tor_browser.tar.xz.asc && \
-    gpg --keyserver pool.sks-keyservers.net --recv-keys "EF6E 286D DA85 EA2A 4BA7  DE68 4E2C 6E87 9329 8290" && \
+    wget --no-verbose "https://${TOR_DIST_MIRROR}/dist/torbrowser/${TBB_VERSION}/tor-browser-linux64-${TBB_VERSION}_en-US.tar.xz.asc" -O tor_browser.tar.xz.asc && \
+    gpg --keyserver "${GPG_KEYSERVER}" --recv-keys "${TBB_KEYID}" && \
     gpg --verify tor_browser.tar.xz.asc && \
     rm tor_browser.tar.xz && \
     rm tor_browser.tar.xz.asc && \
@@ -44,12 +49,10 @@ RUN python3 -m virtualenv -p python3 env && \
     ./install_python_dependencies.sh env requirements.txt && \
     rm install_python_dependencies.sh requirements.txt
 
-
 ENV PLUGGABLE_TRANSPORT=meek-azure
 # Copy over the entrypoint and set it up
 COPY entrypoint.sh . 
 ENTRYPOINT ["./entrypoint.sh"]
 
 # Copy over the python scripts
-COPY python/generate_tor_prefs.py bin/
-COPY python/meek_data_generator.py .
+COPY python/tor_datagen.py bin/

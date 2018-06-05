@@ -32,7 +32,10 @@ RUN apt-get update -y && \
 # Re-run update since  before this will likely change only rarely
 RUN apt-get update -y && \
 	apt-get upgrade -y && \
-	apt-get install -y bzip2 ca-certificates dbus-x11 firefox gnupg libevent-2.1-6 libgtk2.0-0 python python-virtualenv python3 python3-virtualenv pulseaudio sudo tcpdump tor tzdata unzip wget x11vnc x11-utils x11-xserver-utils xauth xterm xvfb xz-utils && \
+	apt-get install -y \
+		bzip2 ca-certificates dbus-x11 firefox gnupg libevent-2.1-6 libgtk2.0-0 python python-virtualenv \
+		python3 python3-virtualenv pulseaudio sudo tcpdump tigervnc-standalone-server tor tzdata unzip wget x11vnc \
+		x11-utils x11-xserver-utils xauth xterm xvfb xz-utils && \
 	apt-get purge -y tor
 # Set timezone
 RUN echo "${TZ}" > /etc/timezone && \
@@ -55,8 +58,6 @@ USER $DEFAULT_USER
 # Set up files needed for the X and vnc server
 ENV DISPLAY=:0
 RUN touch .Xauthority .xserver.xauth
-# Copy over the VNC password
-COPY vnc_password .vnc_password
 
 # Download the alexa top 1M dataset
 RUN mkdir data &&\
@@ -65,6 +66,8 @@ RUN mkdir data &&\
 	unzip top-1m.csv.zip && \
 	rm top-1m.csv.zip
 
+# Copy over the VNC password
+COPY vnc_password .vnc_password
 # Copy miscellaneous scripts
 # TODO: change this to use a variable user when it is supported
 COPY --chown=user:user bin bin

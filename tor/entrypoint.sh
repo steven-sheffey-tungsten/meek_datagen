@@ -38,7 +38,7 @@ export TCPDUMP_PID=""
 while [[ $TCPDUMP_PID == "" ]]; do
 	export TCPDUMP_PID=`ps --ppid $! -o pid=`
 done
-echo "TCPDUMP started on $TCPDUMP_PID"
+echo "TCPDUMP started at PID $TCPDUMP_PID"
 
 # Set up a trap so TCPdump gets killed cleanly 
 cleanly_kill_tcpdump() {
@@ -56,11 +56,13 @@ trap cleanly_kill_tcpdump SIGKILL
 # Copy the proper meek config to into the tor browser's profile
 # generate_tor_prefs.py $PLUGGABLE_TRANSPORT > $TBB_PATH/Browser/TorBrowser/Data/Browser/profile.default/prefs.js
 
-
 # Activate the python environment
 source ./env/bin/activate
 # Run the capture script
 # ./meek_data_generator.py &
+# Enter the tor browser bundle folder
+python3 -u bin/tor_datagen.py $TBB_PATH data/top-1m.csv &
+
 # Run "asynchronously" so BASH can capture signals
 wait $!
 # Deactivate the python environment
