@@ -32,7 +32,7 @@ RUN apt-get update -y && \
 	apt-get upgrade -y && \
 	apt-get install -y \
 		bzip2 ca-certificates dbus-x11 firefox gnupg libgtk2.0-0 \
-		python python-virtualenv python3 python3-virtualenv \
+		python3 python3-virtualenv \
 		sudo tcpdump tor tzdata unzip wget xvfb xz-utils && \
 	apt-get purge -y tor
 # Set timezone

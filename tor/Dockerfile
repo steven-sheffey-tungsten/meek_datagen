@@ -41,17 +41,11 @@ RUN wget --no-verbose "${TOR_DIST_MIRROR}/dist/torbrowser/${TBB_VERSION}/tor-bro
 
 # Copy over files required for building a python environment
 COPY python/requirements.txt .
-COPY python/requirements2.txt .
 COPY python/install_python_dependencies.sh . 
 # Set up a python3 virtual environment
 RUN python3 -m virtualenv -p python3 env && \
-    ./install_python_dependencies.sh env requirements.txt
-# Set up a python2 virtual environment
-RUN python2 -m virtualenv -p python2 env2 && \
-    ./install_python_dependencies.sh env2 requirements2.txt && \
-    rm requirements2.txt
-# Delete the unnecessary files after environment has been created
-RUN rm -f install_python_dependencies.sh requirements2.txt requirements.txt
+    ./install_python_dependencies.sh env requirements.txt && \
+	rm -f install_python_dependencies.sh  requirements.txt
 
 # Copy over the entrypoint and set it up
 COPY entrypoint.sh . 
