@@ -46,10 +46,7 @@ urls_path = Path(sys.argv[2])
 num_urls = int(sys.argv[3])
 # Get random seed
 try:
-    seed = int(sys.argv[4])
-    # Get the hostname, and turn it into bytes to be used by the random seed
-    hostname = socket.gethostname()
-    seed = hashlib.blake2b().digest()
+    seed = sys.argv[4]
     random.seed(seed)
 except:
     print("Error getting seed")
@@ -133,7 +130,7 @@ with urls_path.open('r') as urls_file:
         logger.info("Navigating to {} ({}/{})".format(url, idx + 1, num_urls))
         # Make a get request to the tor process
         try:
-            response = session.get(url, timeout=(5, None))
+            response = session.get(url, timeout=5)
             logger.info("Code: {}, Body Length: {}".format(response.status_code, len(response.text)))
         except:
             logger.info("Failed to request {}".format(url))
