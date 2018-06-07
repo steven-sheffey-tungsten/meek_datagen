@@ -20,11 +20,5 @@ IMAGE_TAG=latest
 
 ,PHONY: build
 build:
-	# Generate a new password
-	LC_CTYPE=C tr -dc "[[:print:]]" < /dev/urandom | head -c 8 > vnc_password
 	# Build the image
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
-	# Generate a vncpasswd for use in tightvnc viewer
-	docker run --rm -v `pwd`:/outside \
-		$(IMAGE_NAME):$(IMAGE_TAG) \
-		bash -c "vncpasswd -f < .vnc_password > /outside/vncpasswd"

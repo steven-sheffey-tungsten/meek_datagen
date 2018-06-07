@@ -15,57 +15,43 @@
 # You should have received a copy of the GNU General Public License
 # along with meek_datagen.  If not, see <http://www.gnu.org/licenses/>.
 
-# Add local scripts to path
-PATH=$HOME/bin:$PATH
+set -eu
 
+# Where to find alexa top1m data
+export ALEXA_PATH="$HOME/data/top-1m.csv"
+# Amount of time to wait for tcpdump to start
+export TCPDUMP_TIME=5
 # Prefix for captures
-PCAP_PREFIX=$PLUGGABLE_TRANSPORT
+export PCAP_PREFIX="meek-azure"
 
-# Log file for tor browser
-export TBB_LOG=$HOME/logs/tbb-$(hostname).log
 
-# Start XVFB
-source start_xvfb.sh
-# Start VNC
-start_vnc.sh
-
-# Start capturing packets
-echo "Starting TCPDUMP"
-# Captures all traffic on port 443
-sudo tcpdump -j host_hiprec -K -w pcap_data/${PCAP_PREFIX}_$(date +%s)_$(hostname).pcap port not 5900 &
-# Get PID of tcpdump
-export TCPDUMP_PID=""
-while [[ $TCPDUMP_PID == "" ]]; do
-	export TCPDUMP_PID=`ps --ppid $! -o pid=`
-done
-echo "TCPDUMP started at PID $TCPDUMP_PID"
-
-# Set up a trap so TCPdump gets killed cleanly 
-cleanly_kill_tcpdump() {
-	# Kill firefox if it exists
-	# Once program is done, wait until we have cleanly killed tcpdump
-	echo "Waiting for TCPDUMP to exit cleanly"
-	while sudo kill $TCPDUMP_PID; do
-		sleep 0.5
-	done
+# Used to gracefully quit on interrupt
+gracefully_quit() {
+	# Stop tcpdump
+	echo "Gracefully stopping tcpdump"
+	sudo stop_tcpdump.sh
 }
-trap cleanly_kill_tcpdump SIGTERM
-trap cleanly_kill_tcpdump SIGINT
-trap cleanly_kill_tcpdump SIGKILL
 
-# Copy the proper meek config to into the tor browser's profile
-# generate_tor_prefs.py $PLUGGABLE_TRANSPORT > $TBB_PATH/Browser/TorBrowser/Data/Browser/profile.default/prefs.js
+# Run tor browser once initially to get profiles set up
+# xvfb-run ./initial_tor_browser_setup.sh "$TBB_PATH"
+
+# Start capturing traffic
+sudo start_tcpdump.sh $PCAP_PREFIX &
+# Wait a bit for tcpdump to start
+echo "Waiting ${TCPDUMP_TIME} seconds for tcpdump to start"
+sleep "$TCPDUMP_TIME"
+echo "Finished waiting for tcpdump"
 
 # Activate the python environment
+export PS1=""
 source ./env/bin/activate
-# Run the capture script
-# ./meek_data_generator.py &
-# Enter the tor browser bundle folder
-python3 -u bin/tor_datagen.py $TBB_PATH data/top-1m.csv &
-
-# Run "asynchronously" so BASH can capture signals
+# Using the meek client mask in TBB requires being in the bundle/Browser directory
+cd "$TBB_PATH/Browser"
+# Generate some data by downloading many webpages over meek 
+xvfb-run python3 -u /usr/local/bin/tor_datagen.py "$TBB_PATH" "$ALEXA_PATH" 10 1337 &
+# Set up the signal handler
+trap 'gracefully_quit' SIGINT SIGTERM SIGSTOP SIGKILL EXIT
+# Wait for the python script to finish (or be interrupted)
 wait $!
-# Deactivate the python environment
-deactivate
-
-cleanly_kill_tcpdump
+# Exit, which triggers the signal
+exit 0

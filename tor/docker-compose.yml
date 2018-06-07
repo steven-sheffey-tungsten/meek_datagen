@@ -18,12 +18,6 @@ services:
     trace_generator:
         build:
             context: .
-        ports:
-            - "5950-5999:5900"
-        environment:
-            MEEK_SERVICE: amazon
-            XFB_SCREEN: 1600x900x24
-            XFB_SCREEN_DPI: 100
         volumes:
             - ./pcap_data:/home/user/pcap_data
             - ./logs:/home/user/logs

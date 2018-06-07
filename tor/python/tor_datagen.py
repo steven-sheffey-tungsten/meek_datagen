@@ -15,29 +15,45 @@
 # You should have received a copy of the GNU General Public License
 # along with meek_datagen.  If not, see <http://www.gnu.org/licenses/>.
 
+import hashlib
+import logging
 import os
 from pathlib import Path
+import random
 import requests
 from requests.adapters import HTTPAdapter
 import signal
+import socket
 import sys
 from stem import process as stem_process
 from time import sleep
 
 
-def ls(path):
-    messages = []
-    for path in path.iterdir():
-        messages.append("{} {}".format("d" if path.is_dir() else "f", path))
-    messages.sort()
-    for message in messages:
-        print(message)
+# Set up a logger
+logger = logging.getLogger("meek_datagen")
+logger.setLevel(logging.DEBUG)
+log_handler = logging.StreamHandler()
+log_formatter = logging.Formatter("%(filename)s %(asctime)s %(levelname)s %(funcName)s:%(lineno)d  %(message)s")
+log_handler.setFormatter(log_formatter)
+logger.addHandler(log_handler)
+
 # Parse command line arguments
 # Get path to browser bundle
 tbb_path = Path(sys.argv[1])
 # Get path to urls
 urls_path = Path(sys.argv[2])
-
+# Get number of URLS to retrieve
+num_urls = int(sys.argv[3])
+# Get random seed
+try:
+    seed = int(sys.argv[4])
+    # Get the hostname, and turn it into bytes to be used by the random seed
+    hostname = socket.gethostname()
+    seed = hashlib.blake2b().digest()
+    random.seed(seed)
+except:
+    print("Error getting seed")
+    random.seed(0)
 # Get path to tor folder
 tor_path = tbb_path / "Browser" / "TorBrowser" / "Tor"
 # Tor daemon
@@ -46,6 +62,9 @@ tor_executable_path = tor_path / "tor"
 meek_client_path = tor_path / "PluggableTransports" / "meek-client"
 # Meek client helper
 meek_client_tb_path = tor_path / "PluggableTransports" / "meek-client-torbrowser"
+# Extension config
+extension_override_path = tbb_path / "Browser/TorBrowser/Data/Browser/profile.default/preferences/extension-overrides.js"
+
 # Set environment to use tor directory for dynamic libs
 if "LD_LIBRARY_PATH" in os.environ:
     os.environ["LD_LIBRARY_PATH"] = "{}:{}".format(os.environ["LD_LIBRARY_PATH"], str(tor_path))
@@ -53,38 +72,72 @@ else:
     os.environ["LD_LIBRARY_PATH"] = str(tor_path)
 
 # Configure tor to use the proper pluggable transport
-meek_bridge = "meek 0.0.2.0:3 97700DFE9F483596DDA6264C4D7DF7641E1E39CE url=https://meek.azureedge.net/ front=ajax.aspnetcdn.com"
-tor_config = {
-    "ClientTransportPlugin": "meek exec {} -- {}".format(meek_client_tb_path, meek_client_path),
-    "Bridge": meek_bridge
-}
+# Extract the proper pluggable transport from the tor browser plugin preferences
+def get_bridges(extension_override_path, bridge_type):
+    bridges = []
+    with extension_override_path.open("r") as extension_override_file:
+        # Iterate over each configuration option
+        # TODO: something more resilient such as a js parser
+        for config_line in extension_override_file.readlines():
+            # ignore non-preference lines
+            if not config_line.startswith("pref("):
+                continue
+            # Parse the line into key, value
+            key, value = config_line.lstrip("pref(").rstrip(");\n").split(", ")
+            # Strip all quotes and spaces from key and value
+            key = key.strip("\" ")
+            value = value.strip("\" ")
+            # Grab all config lines that refer to
+            if key.startswith("extensions.torlauncher.default_bridge.{}".format(bridge_type)):
+                bridges.append(value)
+    return bridges
 
-# Create a requests session that stores a static proxy config
+
+
+
+# Get the first bridge
+bridge = get_bridges(extension_override_path, "meek-azure")[0]
+# bridge = "meek 0.0.2.0:3 97700DFE9F483596DDA6264C4D7DF7641E1E39CE url=https://meek.azureedge.net/ front=ajax.aspnetcdn.com"
+logger.info("Using bridge {}".format(bridge))
+# Set up tor daemon configuration options 
+tor_config = {
+    "UseBridges": "1",
+    "ClientTransportPlugin": "meek exec {} -log /home/user/logs/meek_helper.log -- {} -log /home/user/logs/meek.log".format(meek_client_tb_path.absolute(), meek_client_path.absolute()),
+    "Bridge": bridge
+}
+# Create a requests session that uses a static proxy config
 session = requests.Session()
 session.proxies = {
-    "http": "socks5://localhost:9050",
-    "https": "socks5://localhost:9050"
+    "http": "socks5h://127.0.0.1:9050",
+    "https": "socks5h://127.0.0.1:9050"
 }
+session.headers.update({'User-Agent': 'AntifaSuperSoldier/Palestine4ever'})
 # Ensure we don't retry too many times
 session.mount("h", HTTPAdapter(max_retries=1))
 with urls_path.open('r') as urls_file:
-    for url in urls_file.readlines():
-        # Strip off useless info and add in protocol
-        url = "http://{}".format(url.rstrip().split(",")[1])
+    # Read in hosts from the alexa top 1M
+    urls = list(map(lambda line: line.rstrip().split(",")[1], urls_file.readlines()))
+    # Shuffle them
+    random.shuffle(urls)
+    # Pick some number of them out
+    urls = urls[:num_urls]
+    for idx, url in enumerate(urls):
+        # Add protocol
+        # TODO: add https
+        url = "http://{}".format(url)
         # Start the tor process
-        print("Starting tor")
-        tor_process = stem_process.launch_tor_with_config(config=tor_config, tor_cmd=str(tor_executable_path))
-        print("Started tor")
+        logger.info("Starting tor")
+        tor_process = stem_process.launch_tor_with_config(config=tor_config, tor_cmd=str(tor_executable_path), timeout=600, take_ownership=True, init_msg_handler=print)
+        logger.info("Started tor")
         # Print the URL
-        print("Navigating to {}".format(url))
+        logger.info("Navigating to {} ({}/{})".format(url, idx + 1, num_urls))
         # Make a get request to the tor process
         try:
             response = session.get(url, timeout=(5, None))
+            logger.info("Code: {}, Body Length: {}".format(response.status_code, len(response.text)))
         except:
-            print("Failed to request {}".format(url))
-        # Print some debug info
-        print("Code: {}, Body Length: {}".format(response.status_code, len(response.text)))
+            logger.info("Failed to request {}".format(url))
         # Kill the tor process and wait for it to end so we can restart it
-        print("Killing tor")
+        logger.info("Killing tor")
         tor_process.kill()
-        print("Killed tor")
+        logger.info("Killed tor")
