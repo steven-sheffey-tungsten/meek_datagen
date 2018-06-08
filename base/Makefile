@@ -18,7 +18,7 @@ all: build
 IMAGE_NAME=packet_capture_base
 IMAGE_TAG=latest
 
+,PHONY: build
 build:
+	# Build the image
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
-generate_vnc_password:
-	dd bs=64 count=1 if=/dev/urandom | base64 -w 0 > vnc_password

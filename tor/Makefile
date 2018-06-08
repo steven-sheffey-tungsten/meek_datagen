@@ -15,7 +15,7 @@
 # along with meek_datagen.  If not, see <http://www.gnu.org/licenses/>.
 all: build
 
-SERVICE_NAME=tor_trace_generator
+SERVICE_NAME=trace_generator
 SCALE_SIZE=5
 
 build:
@@ -24,7 +24,7 @@ run: build
 	# Create volumes
 	mkdir -p pcap_data
 	mkdir -p logs
-	# Run image
+	# Run image in background
 	docker-compose up --force-recreate $(SERVICE_NAME)
 scale: build
 	# Create volumes
@@ -33,5 +33,6 @@ scale: build
 	# Run image
 	docker-compose up --force-recreate --scale $(SERVICE_NAME)=$(SCALE_SIZE)
 vnc:
-	vncpasswd -f < ../base/vnc_password > .vncpasswd
-	vncviewer localhost:$(PORT) -passwd .vncpasswd
+	@docker ps
+	@read -p "Enter the port for vnc: " -r PORT; \
+	vncviewer localhost:$$PORT -passwd ../base/vncpasswd

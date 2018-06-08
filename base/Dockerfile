@@ -18,53 +18,42 @@
 FROM ubuntu:18.04
 
 # Package metadata
-LABEL version="0.4"
-LABEL Description="This image starts up a browser, and navigates websites to produce packet captures"
-
+LABEL version="0.6"
+LABEL Description="Base image providing libraries necessary for headless browsing"
 ENV DEBIAN_FRONTEND=noninteractive \
 	DEBCONF_NONINTERACTIVE_SEEN=true \
 	TZ="UTC" \
 	DEFAULT_USER=user
-
-# Add apt utils to avoid errors
+# Add apt utils initially to get rid of a few errors
 RUN apt-get update -y && \
 	apt-get install -y apt-utils 
-# Re-run update since  before this will likely change only rarely
+# Install all packages
 RUN apt-get update -y && \
 	apt-get upgrade -y && \
-	apt-get install -y bzip2 ca-certificates dbus-x11 firefox gnupg libevent-2.1-6 libgtk2.0-0 python python-virtualenv python3 python3-virtualenv pulseaudio sudo tcpdump tor tzdata unzip wget x11vnc x11-utils x11-xserver-utils xauth xterm xvfb xz-utils && \
+	apt-get install -y \
+		bzip2 ca-certificates dbus-x11 firefox gnupg libgtk2.0-0 \
+		python3 python3-virtualenv \
+		sudo tcpdump tor tzdata unzip wget xvfb xz-utils && \
 	apt-get purge -y tor
 # Set timezone
 RUN echo "${TZ}" > /etc/timezone && \
 	dpkg-reconfigure --frontend noninteractive tzdata
-
 # Add an untrusted user
 RUN useradd -m ${DEFAULT_USER} && \
     chown -R ${DEFAULT_USER}.${DEFAULT_USER} /home/${DEFAULT_USER} && \
 	chmod -R 770 /home/${DEFAULT_USER}
-
 # Give the untrusted user permission to use sudo to	sniff packets
-RUN echo "${DEFAULT_USER} ALL=NOPASSWD: /usr/sbin/tcpdump, /bin/kill" > /etc/sudoers.d/tcpdump
-
-
+RUN echo "${DEFAULT_USER} ALL=NOPASSWD: /usr/local/bin/start_tcpdump.sh" >> /etc/sudoers.d/tcpdump
+RUN echo "${DEFAULT_USER} ALL=NOPASSWD: /usr/local/bin/stop_tcpdump.sh" >> /etc/sudoers.d/tcpdump
 # Use the user's home dir for all activities
 WORKDIR /home/$DEFAULT_USER
-# Switch to user
-USER $DEFAULT_USER
-
-# Set up files needed for the X and vnc server
-ENV DISPLAY=:0
-RUN touch .Xauthority .xserver.xauth
-# Copy over the VNC password
-COPY vnc_password .vnc_password
-
 # Download the alexa top 1M dataset
 RUN mkdir data &&\
     cd data && \
 	wget --no-verbose "https://s3.amazonaws.com/alexa-static/top-1m.csv.zip"	&& \
 	unzip top-1m.csv.zip && \
 	rm top-1m.csv.zip
-
-# Copy miscellaneous scripts
-# TODO: change this to use a variable user when it is supported
-COPY --chown=user:user bin bin
+# Copy all scripts into our VM's local prefix
+COPY bin/* /usr/local/bin/
+# Switch to user
+USER $DEFAULT_USER
