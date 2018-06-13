@@ -142,7 +142,7 @@ with urls_path.open('r') as urls_file:
             # Print some debug information
             logger.debug("Code: {}, Body Length: {}".format(response.status_code, len(response.text)))
             # Choose some number of pages to grab additionally
-            num_extra_urls = abs(int(round(random.gauss(EXTRA_PAGES_MEAN, EXTRA_PAGES_STDEV),0)))
+            num_extra_urls = max(int(round(random.gauss(EXTRA_PAGES_MEAN, EXTRA_PAGES_STDEV),0)),0)
             if num_extra_urls != 0:
                 # Parse the page
                 soup = BeautifulSoup(response.text, 'lxml')
