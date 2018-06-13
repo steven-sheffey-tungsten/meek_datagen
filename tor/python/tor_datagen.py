@@ -53,8 +53,8 @@ except:
     print("Error getting seed")
     random.seed(0)
 # Random ranges for data
-MIN_EXTRA_PAGES = 0
-MAX_EXTRA_PAGES = 20
+EXTRA_PAGES_MEAN = 1
+EXTRA_PAGES_STDEV = 5
 # Parameters for the requester
 # Timeout for requests in seconds
 REQUEST_TIMEOUT=5
@@ -142,7 +142,7 @@ with urls_path.open('r') as urls_file:
             # Print some debug information
             logger.debug("Code: {}, Body Length: {}".format(response.status_code, len(response.text)))
             # Choose some number of pages to grab additionally
-            num_extra_urls = random.randrange(MIN_EXTRA_PAGES, MAX_EXTRA_PAGES)
+            num_extra_urls = abs(int(round(random.gauss(EXTRA_PAGES_MEAN, EXTRA_PAGES_STDEV),0)))
             if num_extra_urls != 0:
                 # Parse the page
                 soup = BeautifulSoup(response.text, 'lxml')
