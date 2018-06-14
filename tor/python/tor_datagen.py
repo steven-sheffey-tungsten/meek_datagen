@@ -115,7 +115,6 @@ session.proxies = {
     "http": "socks5h://127.0.0.1:9050",
     "https": "socks5h://127.0.0.1:9050"
 }
-session.headers.update({'User-Agent': 'AntifaSuperSoldier/Palestine4ever'})
 # Ensure we don't retry too many times
 session.mount("h", HTTPAdapter(max_retries=1))
 with urls_path.open('r') as urls_file:

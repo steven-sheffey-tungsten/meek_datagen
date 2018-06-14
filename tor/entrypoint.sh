@@ -48,7 +48,7 @@ source ./env/bin/activate
 # Using the meek client mask in TBB requires being in the bundle/Browser directory
 cd "$TBB_PATH/Browser"
 # Generate some data by downloading many webpages over meek 
-xvfb-run python3 -u /usr/local/bin/tor_datagen.py "$TBB_PATH" "$ALEXA_PATH" 100 $(hostname) &
+xvfb-run python3 -u /usr/local/bin/tor_datagen.py "$TBB_PATH" "$ALEXA_PATH" 10000 $(hostname) &
 # Set up the signal handler
 trap 'gracefully_quit' SIGINT SIGTERM SIGSTOP SIGKILL EXIT
 # Wait for the python script to finish (or be interrupted)
