@@ -32,6 +32,8 @@ scale: build
 	mkdir -p logs
 	# Run image
 	docker-compose up --force-recreate --scale $(SERVICE_NAME)=$(SCALE_SIZE)
+kill:
+	docker-compose exec $(SERVICE_NAME) pkill python
 vnc:
 	@docker ps
 	@read -p "Enter the port for vnc: " -r PORT; \

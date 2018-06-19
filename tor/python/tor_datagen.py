@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with meek_datagen.  If not, see <http://www.gnu.org/licenses/>.
 
+from bs4 import BeautifulSoup
 import hashlib
 import logging
 import os
@@ -51,6 +52,12 @@ try:
 except:
     print("Error getting seed")
     random.seed(0)
+# Random ranges for data
+EXTRA_PAGES_MEAN = 1
+EXTRA_PAGES_STDEV = 5
+# Parameters for the requester
+# Timeout for requests in seconds
+REQUEST_TIMEOUT=5
 # Get path to tor folder
 tor_path = tbb_path / "Browser" / "TorBrowser" / "Tor"
 # Tor daemon
@@ -108,7 +115,6 @@ session.proxies = {
     "http": "socks5h://127.0.0.1:9050",
     "https": "socks5h://127.0.0.1:9050"
 }
-session.headers.update({'User-Agent': 'AntifaSuperSoldier/Palestine4ever'})
 # Ensure we don't retry too many times
 session.mount("h", HTTPAdapter(max_retries=1))
 with urls_path.open('r') as urls_file:
@@ -130,10 +136,27 @@ with urls_path.open('r') as urls_file:
         logger.info("Navigating to {} ({}/{})".format(url, idx + 1, num_urls))
         # Make a get request to the tor process
         try:
-            response = session.get(url, timeout=5)
-            logger.info("Code: {}, Body Length: {}".format(response.status_code, len(response.text)))
-        except:
-            logger.info("Failed to request {}".format(url))
+            # Request the website
+            response = session.get(url, timeout=REQUEST_TIMEOUT)
+            # Print some debug information
+            logger.debug("Code: {}, Body Length: {}".format(response.status_code, len(response.text)))
+            # Choose some number of pages to grab additionally
+            num_extra_urls = max(int(round(random.gauss(EXTRA_PAGES_MEAN, EXTRA_PAGES_STDEV),0)),0)
+            if num_extra_urls != 0:
+                # Parse the page
+                soup = BeautifulSoup(response.text, 'lxml')
+                # Get all elements with "src" attribute
+                extra_urls = list(map(lambda element: element["src"], soup.find_all(attrs={"src": True})))
+                # Shuffle them
+                random.shuffle(urls)
+                # Grab the number of urls generated
+                for extra_url in extra_urls[:num_extra_urls]:
+                    logger.info("Pulling extra URL {}".format(extra_url))
+                    response = session.get(extra_url, timeout=REQUEST_TIMEOUT)
+                    logger.debug("Code: {}, Body Length: {}".format(response.status_code, len(response.text)))
+
+        except Exception as exc:
+            logger.info("Failed to request {}: {}".format(url, exc))
         # Kill the tor process and wait for it to end so we can restart it
         logger.info("Killing tor")
         tor_process.kill()
