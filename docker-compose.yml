@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright 2018 Steven Sheffey
 # This file is part of meek_datagen.
 # 
@@ -14,6 +13,13 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with meek_datagen.  If not, see <http://www.gnu.org/licenses/>.
-source $1/bin/activate
-pip install -U -r $2
-deactivate
+version: '3.5'
+services:
+    trace_generator:
+        build:
+            context: .
+        volumes:
+            - ./pcap_data:/mnt/stephen/pcap_data
+            - /dev/shm:/dev/shm
+volumes:
+    pcap_data:
