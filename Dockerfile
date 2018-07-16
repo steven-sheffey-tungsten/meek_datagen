@@ -80,6 +80,9 @@ USER $DEFAULT_USER
 
 
 # Set versioning for tor browser
+# If tor is blocked on your network, change the mirror to one of the mirrors listed here
+# https://www.torproject.org/getinvolved/mirrors.html.en
+# You may have to fiddle with the URLs a bit
 ENV TOR_DIST_MIRROR="https://www.torproject.org" \
     TBB_PATH="/home/$DEFAULT_USER/tor_browser" \
 	TBB_VERSION="7.5.6" \
@@ -106,13 +109,14 @@ COPY src/requirements.txt .
 # Set up the python3 virtual environment
 RUN python3 -m virtualenv -p python3 env && \
     install_python_dependencies.sh env requirements.txt && \
-	rm -f install_python_dependencies.sh  requirements.txt
+	rm -f install_python_dependencies.sh  requirements.txt && \
+	mkdir src
 
 # Copy over the entrypoint and set it
 COPY entrypoint.sh . 
 ENTRYPOINT ["./entrypoint.sh"]
 
-# Copy over the python source code into the prefix
-COPY src/tor_datagen.py /usr/local/bin/
+# Copy over the python source code into the image
+COPY src/*.py src/
 # Copy over the config file
 COPY config.toml .
