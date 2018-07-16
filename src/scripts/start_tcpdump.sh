@@ -27,7 +27,7 @@ export PREFIX="$1"
 # TODO: use expect instead of sleep
 echo "Starting tcpdump"
 tcpdump -j host_hiprec -K \
-	-w "pcap_data/${PREFIX}_$(date +%s)_$(hostname).pcap" &
+	-w "/pcap_data/${PREFIX}_$(date +%s)_$(hostname).pcap" &
 # Store the PID as a variable
 export TCPDUMP_PID="$!"
 # Store its PID in a file

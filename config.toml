@@ -1,10 +1,15 @@
 mode = "tor"
 
 [common]
-timeout = 6
-seed = 0
 loglevel = "debug"
+page_timeout = 60
+shuffle = false 
+seed = 1337
+
 
 [tor]
 bridge = "meek 0.0.2.0:3 97700DFE9F483596DDA6264C4D7DF7641E1E39CE url=https://meek.azureedge.net/ front=ajax.aspnetcdn.com"
 port = 9050
+[tor.timeout]
+initial = 600
+regular = 60

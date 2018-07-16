@@ -19,7 +19,5 @@ services:
         build:
             context: .
         volumes:
-            - ./pcap_data:/mnt/stephen/pcap_data
+            - /mnt/stephen/pcap_data:/pcap_data
             - /dev/shm:/dev/shm
-volumes:
-    pcap_data:

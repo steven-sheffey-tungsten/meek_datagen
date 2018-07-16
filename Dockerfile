@@ -57,6 +57,16 @@ RUN useradd -m ${DEFAULT_USER} && \
 RUN echo "${DEFAULT_USER} ALL=NOPASSWD: /usr/local/bin/start_tcpdump.sh" >> /etc/sudoers.d/tcpdump
 RUN echo "${DEFAULT_USER} ALL=NOPASSWD: /usr/local/bin/stop_tcpdump.sh" >> /etc/sudoers.d/tcpdump
 
+# Copy firefox and geckodriver
+COPY --from=selenium /opt/firefox-* /opt/firefox
+COPY --from=selenium /opt/geckodriver-* /opt/geckodriver
+# Add symlinks for firefox and geckodriver
+# TODO: less hacky way
+RUN ln -sf /opt/firefox/firefox /usr/local/bin/firefox && \
+	ln -sf /opt/geckodriver /usr/local/bin/geckodriver 
+
+# Use the user's home dir for all activities
+WORKDIR /home/$DEFAULT_USER
 
 # Download the alexa top 1M dataset
 RUN mkdir data &&\
@@ -65,12 +75,9 @@ RUN mkdir data &&\
 	unzip top-1m.csv.zip && \
 	rm top-1m.csv.zip
 
-
 # Switch to untrusted user for tor, since that dir needs to be writable
 USER $DEFAULT_USER
 
-# Use the user's home dir for all activities
-WORKDIR /home/$DEFAULT_USER
 
 # Set versioning for tor browser
 ENV TOR_DIST_MIRROR="https://www.torproject.org" \
@@ -90,14 +97,6 @@ RUN wget --no-verbose "${TOR_DIST_MIRROR}/dist/torbrowser/${TBB_VERSION}/tor-bro
     tar xf tor_browser.tar.xz && \
     mv tor-browser_en-US $TBB_PATH && \
     rm tor_browser.tar.xz tor_browser.tar.xz.asc
-
-# Copy firefox and geckodriver
-COPY --from=selenium /opt/firefox* /opt/
-COPY --from=selenium /opt/geckodriver* /opt/
-# Copy the symlinks
-COPY --from=selenium /usr/bin/firefox /usr/bin/firefox
-COPY --from=selenium /usr/bin/geckodriver /usr/bin/firefox
-
 
 
 # Copy all scripts into our VM's local prefix

@@ -16,7 +16,7 @@
 all: build
 
 SERVICE_NAME=trace_generator
-SCALE_SIZE=5
+SCALE_SIZE=6
 
 build:
 	docker-compose build $(SERVICE_NAME)
@@ -33,8 +33,10 @@ scale: build
 	# Run image
 	docker-compose up --force-recreate --scale $(SERVICE_NAME)=$(SCALE_SIZE)
 kill:
-	docker-compose exec $(SERVICE_NAME) pkill python
-vnc:
-	@docker ps
-	@read -p "Enter the port for vnc: " -r PORT; \
-	vncviewer localhost:$$PORT -passwd ../base/vncpasswd
+	docker-compose exec --index=$$INDEX $(SERVICE_NAME) pkill python
+killall:
+	docker-compose exec --index=1 $(SERVICE_NAME) pkill python
+	docker-compose exec --index=2 $(SERVICE_NAME) pkill python
+	docker-compose exec --index=3 $(SERVICE_NAME) pkill python
+	docker-compose exec --index=4 $(SERVICE_NAME) pkill python
+	docker-compose exec --index=5 $(SERVICE_NAME) pkill python
