@@ -43,12 +43,15 @@ sleep "$TCPDUMP_TIME"
 echo "Finished waiting for tcpdump"
 
 export CONFIG_FILENAME="$(pwd)/config.toml"
+export SRC_DIR="$(pwd)/src"
 # Activate the python environment
 export PS1=""
 source ./env/bin/activate
 cd "$TBB_PATH/Browser"
+
 # Generate some data by downloading many webpages over meek 
-xvfb-run python3 -u /usr/local/bin/tor_datagen.py "$CONFIG_FILENAME" "$TBB_PATH" "$ALEXA_PATH" 10000 $(hostname) &
+xvfb-run -a python3 -u "$SRC_DIR/tor_datagen.py" "$CONFIG_FILENAME" "$TBB_PATH" "$ALEXA_PATH" &
+
 # Set up the signal handler
 trap 'gracefully_quit' SIGINT SIGTERM SIGSTOP SIGKILL EXIT
 # Wait for the python script to finish (or be interrupted)

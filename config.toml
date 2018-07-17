@@ -1,11 +1,18 @@
+# "tor" or "normal"
 mode = "tor"
 
 [common]
-loglevel = "debug"
-page_timeout = 60
 shuffle = false 
 seed = 1337
 
+[log]
+name = "meek_datagen"
+level = "debug"
+
+[firefox]
+# page_timeout = 60
+page_timeout = 5
+retries = 3
 
 [tor]
 bridge = "meek 0.0.2.0:3 97700DFE9F483596DDA6264C4D7DF7641E1E39CE url=https://meek.azureedge.net/ front=ajax.aspnetcdn.com"
