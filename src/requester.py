@@ -1,6 +1,9 @@
+from base64 import b64encode
 import logging
+import traceback
 
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import FirefoxOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.proxy import Proxy, ProxyType
@@ -21,6 +24,9 @@ class Requester():
         options.set_headless(True)
         # Configure profile settings
         profile = FirefoxProfile()
+        # Disable CSS since it doesn't make extra requests, and disabling it speeds us up
+        profile.set_preference('permissions.default.stylesheet', 2)
+        profile.set_preference('permissions.default.image', 2)
         # Add the proxy if applicable
         if config["mode"] == "tor":
             profile.set_preference("network.proxy.type", 1)
@@ -29,7 +35,9 @@ class Requester():
             profile.set_preference("network.proxy.socks_remote_dns", True)
         # Store configs, the profile and options
         self.retries = config["firefox"]["retries"]
-        self.page_timeout = config["firefox"]["page_timeout"]
+        self.page_timeout = config["firefox"]["timeout"]["page"]
+        self.element_timeout = config["firefox"]["timeout"]["element"]
+        self.wait_tag = config["firefox"]["wait_tag"]
         self.options = options
         self.profile = profile
         # Set driver to None for now
@@ -44,7 +52,7 @@ class Requester():
         # Build a Firefox webdriver
         self.driver = webdriver.Firefox(self.profile, firefox_options=self.options)
         # Set timeouts
-        self.driver.set_page_load_timeout(self.page_timeout)
+        self.driver.set_page_load_timeout(self.page_timeout // 5)
         # self.driver.implicitly_wait(self.page_timeout)
         return self
     def __exit__(self, typ, value, traceback):
@@ -88,14 +96,29 @@ class Requester():
                     )
                 )
                 continue 
-            # Ignore other exceptions, since we'll allow timeout
-            # TODO: look deeper into this
-            except Exception as exc:
+            # Page will probably time out. If it does, just wait for 
+            except TimeoutException:
                 try:
-                    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG, "body")))
-                except Exception as e:
-                    self.logger.error("{}".format(e))
-                self.logger.error("Failed to request {}: {}".format(url, exc))
+                    self.logger.debug("Waiting to find a {} tag".format(self.wait_tag))
+                    WebDriverWait(
+                        self.driver,
+                        self.element_timeout
+                    ).until(
+                        EC.presence_of_element_located((By.TAG_NAME, self.wait_tag)) 
+                    )
+                    self.logger.debug("Title of loaded page: {}".format(self.driver.title))
+                # If we get a timeout exception here, just ignore it
+                except TimeoutException:
+                    self.logger.warn("Timeout loading {}".format(url))
+                except Exception as exc:
+                    self.logger.error(str(exc))
+                # Break the loop
+                break
+            # Just ignore other exceptions
+            except Exception as err:
+                # Log the error
+                self.logger.error("Failure in making request: {}, {}".format(err, b64encode(traceback.format_exc())))
+                # Break the loop
                 break
         # Clean the driver
         self.cleanup(clear_cookies)
